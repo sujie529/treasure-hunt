@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🗺️ 寻宝大冒险</title>
+<style>
+  :root {
+    --gold: #f5c518;
+    --gold-soft: #ffd76a;
+    --green: #34d399;
+    --red: #f87171;
+    --bg-1: #0b1020;
+    --bg-2: #1a1f3a;
+    --card: rgba(255, 255, 255, 0.045);
+    --card-border: rgba(255, 255, 255, 0.09);
+    --text: #e8e6f0;
+    --muted: #9aa0b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(245, 197, 24, 0.10), transparent 60%),
+      radial-gradient(1000px 700px at 110% 20%, rgba(78, 205, 196, 0.10), transparent 55%),
+      linear-gradient(160deg, var(--bg-1), var(--bg-2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    overflow-x: hidden;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 920px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 22px;
+    padding: 30px 28px 34px;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+  }
+
+  /* ---------- 标题 ---------- */
+  header { text-align: center; margin-bottom: 22px; }
+  h1 {
+    font-size: clamp(26px, 5vw, 40px);
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, var(--gold-soft), #fff7d6, var(--gold));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 30px rgba(245, 197, 24, 0.25);
+  }
+  .subtitle { color: var(--muted); margin-top: 6px; font-size: 14px; letter-spacing: 1px; }
+
+  /* ---------- 进度条 ---------- */
+  .progress-wrap {
+    margin: 22px 0 20px;
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--gold), #ff9d00);
+    box-shadow: 0 0 14px rgba(245, 197, 24, 0.6);
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* ---------- 阶段卡片 ---------- */
+  .stages {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stage {
+    position: relative;
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 14px 8px 12px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.02);
+    transition: transform 0.25s, border-color 0.25s, background 0.25s, box-shadow 0.25s;
+  }
+  .stage .ico { font-size: 26px; display: block; transition: transform 0.3s; }
+  .stage .nm { font-size: 12px; color: var(--muted); margin-top: 7px; display: block; }
+
+  .stage.pending { opacity: 0.55; }
+  .stage.active {
+    border-color: var(--gold);
+    background: rgba(245, 197, 24, 0.08);
+    box-shadow: 0 0 22px rgba(245, 197, 24, 0.25);
+    transform: translateY(-3px);
+  }
+  .stage.active .ico { animation: bounce 0.9s ease-in-out infinite; }
+  .stage.done {
+    border-color: rgba(52, 211, 153, 0.5);
+    background: rgba(52, 211, 153, 0.07);
+    opacity: 1;
+  }
+  .stage.done .ico { filter: none; }
+  .stage .check {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--green);
+    color: #06231a;
+    font-size: 12px;
+    line-height: 18px;
+    opacity: 0;
+    transform: scale(0);
+    transition: 0.25s;
+  }
+  .stage.done .check { opacity: 1; transform: scale(1); }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  /* ---------- 场景区 ---------- */
+  .scene {
+    text-align: center;
+    padding: 26px 16px 22px;
+    border: 1px solid var(--card-border);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+    margin-bottom: 22px;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  #scene-emoji {
+    font-size: 64px;
+    line-height: 1;
+    filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.5));
+  }
+  #scene-emoji.pop { animation: pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  @keyframes pop {
+    0% { transform: scale(0.3) rotate(-12deg); opacity: 0; }
+    60% { transform: scale(1.18) rotate(4deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); }
+  }
+  #scene-caption {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--gold-soft);
+  }
+  #scene-desc { font-size: 13px; color: var(--muted); min-height: 18px; }
+
+  /* ---------- 日志控制台 ---------- */
+  .log-title {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .log-title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .log {
+    background: #060912;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 14px 16px;
+    height: 220px;
+    overflow-y: auto;
+    font-family: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+    font-size: 13.5px;
+    line-height: 1.9;
+  }
+  .log::-webkit-scrollbar { width: 8px; }
+  .log::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 8px; }
+  .log-line { opacity: 0; animation: fadein 0.35s ease forwards; white-space: pre-wrap; word-break: break-word; }
+  .log-line .em { margin-right: 8px; }
+  .log-line.warn { color: var(--gold-soft); }
+  .log-line.err  { color: var(--red); }
+  .log-line.sys  { color: var(--green); font-weight: 600; }
+  @keyframes fadein { to { opacity: 1; } }
+
+  /* ---------- 操作区 ---------- */
+  .actions { text-align: center; margin-top: 22px; }
+  button {
+    font-family: inherit;
+    font-size: 15px;
+    letter-spacing: 1px;
+    color: #201700;
+    font-weight: 700;
+    background: linear-gradient(90deg, var(--gold), #ffb300);
+    border: none;
+    border-radius: 999px;
+    padding: 12px 34px;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(245, 197, 24, 0.35);
+    transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+  }
+  button:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(245, 197, 24, 0.5); }
+  button:active { transform: translateY(0); }
+  button:disabled { filter: grayscale(0.7) brightness(0.7); cursor: not-allowed; }
+
+  /* ---------- 彩带 ---------- */
+  .confetti {
+    position: fixed;
+    top: -16px;
+    width: 10px;
+    height: 16px;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 999;
+    animation: fall linear forwards;
+  }
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(720deg); }
+  }
+
+  @media (max-width: 640px) {
+    .stages { grid-template-columns: repeat(2, 1fr); }
+    .container { padding: 22px 16px 26px; }
+    #scene-emoji { font-size: 50px; }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🗺️ 寻宝大冒险</h1>
+      <div class="subtitle">async / await 驱动的异步寻宝之旅</div>
+    </header>
+
+    <div class="progress-wrap"><div class="progress-bar" id="progress"></div></div>
+
+    <div class="stages" id="stages"></div>
+
+    <div class="scene">
+      <div id="scene-emoji">🧭</div>
+      <div id="scene-caption">准备出发</div>
+      <div id="scene-desc">点击下方按钮开始冒险</div>
+    </div>
+
+    <div class="log-title"><span class="dot"></span>冒险日志</div>
+    <div class="log" id="log"></div>
+
+    <div class="actions">
+      <button id="startBtn" onclick="startHunt()">🚀 开始寻宝</button>
+    </div>
+  </div>
+
+<script>
+  // ============ 工具 ============
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const wander = (base, spread = 300) => sleep(base + Math.random() * spread);
+
+  // 带重试的异步执行器
+  async function withRetry(task, maxAttempts = 3) {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await task();
+      } catch (err) {
+        if (attempt >= maxAttempts) throw err;
+        await addLog("↻", `第 ${attempt} 次尝试失败：${err.message}，稍后重试...`, "warn");
+        await sleep(900);
+      }
+    }
+  }
+
+  // ============ 宝藏地图 API（与 treasure.js 一致） ============
+  class TreasureMap {
+    static async getInitialClue() {
+      await wander(1000);
+      return "在古老的图书馆里找到了第一个线索...";
+    }
+    static async decodeAncientScript(clue) {
+      await wander(1500);
+      if (!clue) throw new Error("没有线索可以解码！");
+      return "解码成功！宝藏藏在一座古老的神庙中...";
+    }
+    static async crossFoggySwamp() {
+      await wander(2000);
+      if (Math.random() < 0.3) throw new Error("糟糕！在迷雾沼泽里迷失了方向！");
+      return "成功穿越迷雾沼泽，前方出现一条隐秘的小路...";
+    }
+    static async solveMerchantRiddle() {
+      await wander(2200);
+      if (Math.random() < 0.25) throw new Error("答错了商人的谜题，被要求重来！");
+      return "答对谜题！神秘商人送给你一张残缺的藏宝图...";
+    }
+    static async navigateMirrorMaze() {
+      await wander(2500);
+      if (Math.random() < 0.2) throw new Error("在镜子迷宫里撞晕了头！");
+      return "走出了镜子迷宫，古老的神庙就在眼前...";
+    }
+    static async searchTemple(location) {
+      await wander(2000);
+      if (Math.random() < 0.4) throw new Error("糟糕！遇到了神庙守卫！");
+      return `根据线索「${location}」，找到了一个神秘的箱子...`;
+    }
+    static async defeatGuardian() {
+      await wander(1500);
+      if (Math.random() < 0.5) throw new Error("神庙守卫太强了，需要再试一次！");
+      return "成功绕过了神庙守卫，来到了宝箱面前...";
+    }
+    static async openTreasureBox() {
+      await wander(1200);
+      return "恭喜！你找到了传说中的宝藏！";
+    }
+  }
+
+  // ============ 阶段与场景配置 ============
+  const STAGES = [
+    { emoji: "📜", name: "图书馆线索" },
+    { emoji: "🔍", name: "解码古文" },
+    { emoji: "🌫️", name: "迷雾沼泽" },
+    { emoji: "🤝", name: "商人谜题" },
+    { emoji: "🪞", name: "镜子迷宫" },
+    { emoji: "🏛️", name: "搜寻神庙" },
+    { emoji: "⚔️", name: "神庙守卫" },
+    { emoji: "🎁", name: "打开宝箱" },
+  ];
+
+  const SCENES = [
+    { emoji: "🧭", caption: "图书馆", desc: "探险家翻看泛黄的古籍，寻找线索…" },
+    { emoji: "📖", caption: "解码古文", desc: "神秘符号在烛光下逐渐清晰…" },
+    { emoji: "🌫️", caption: "迷雾沼泽", desc: "浓雾弥漫，脚下是泥泞的沼泽…" },
+    { emoji: "🎭", caption: "神秘商人", desc: "商人笑着拿出一道古老的谜题…" },
+    { emoji: "🪞", caption: "镜子迷宫", desc: "无数镜像让人头晕目眩…" },
+    { emoji: "🏛️", caption: "古老神庙", desc: "石柱高耸，火把照亮幽深的大殿…" },
+    { emoji: "🛡️", caption: "神庙守卫", desc: "高大的守卫挡住了去路！" },
+    { emoji: "🎁", caption: "神秘宝箱", desc: "箱子上刻满了繁复的花纹…" },
+  ];
+
+  // ============ UI 元素 ============
+  const stagesEl = document.getElementById("stages");
+  const progressEl = document.getElementById("progress");
+  const sceneEmojiEl = document.getElementById("scene-emoji");
+  const sceneCaptionEl = document.getElementById("scene-caption");
+  const sceneDescEl = document.getElementById("scene-desc");
+  const logEl = document.getElementById("log");
+  const startBtn = document.getElementById("startBtn");
+
+  let running = false;
+
+  // 渲染阶段卡片
+  STAGES.forEach((s, i) => {
+    const div = document.createElement("div");
+    div.className = "stage pending";
+    div.id = `stage-${i}`;
+    div.innerHTML = `<span class="ico">${s.emoji}</span><span class="nm">${s.name}</span><span class="check">✓</span>`;
+    stagesEl.appendChild(div);
+  });
+
+  function setStage(i) {
+    document.querySelectorAll(".stage").forEach((el) => {
+      el.classList.remove("active");
+      if (!el.classList.contains("done")) el.classList.add("pending");
+    });
+    const el = document.getElementById(`stage-${i}`);
+    el.classList.remove("pending");
+    el.classList.add("active");
+  }
+
+  function completeStage(i) {
+    const el = document.getElementById(`stage-${i}`);
+    el.classList.remove("active", "pending");
+    el.classList.add("done");
+    progressEl.style.width = `${((i + 1) / STAGES.length) * 100}%`;
+  }
+
+  function setScene(i) {
+    const s = SCENES[i];
+    sceneEmojiEl.textContent = s.emoji;
+    sceneEmojiEl.classList.remove("pop");
+    void sceneEmojiEl.offsetWidth; // 强制重排以重播动画
+    sceneEmojiEl.classList.add("pop");
+    sceneCaptionEl.textContent = s.caption;
+    sceneDescEl.textContent = s.desc;
+  }
+
+  async function addLog(emoji, text, type = "") {
+    const line = document.createElement("div");
+    line.className = "log-line" + (type ? " " + type : "");
+    const em = document.createElement("span");
+    em.className = "em";
+    em.textContent = emoji;
+    const txt = document.createElement("span");
+    line.appendChild(em);
+    line.appendChild(txt);
+    logEl.appendChild(line);
+    // 打字机效果
+    for (let i = 0; i < text.length; i++) {
+      txt.textContent += text[i];
+      await sleep(16);
+    }
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function resetUI() {
+    document.querySelectorAll(".stage").forEach((el) => {
+      el.classList.remove("active", "done");
+      el.classList.add("pending");
+    });
+    progressEl.style.width = "0%";
+    logEl.innerHTML = "";
+    sceneEmojiEl.textContent = "🧭";
+    sceneCaptionEl.textContent = "准备出发";
+    sceneDescEl.textContent = "冒险即将开始…";
+    startBtn.disabled = true;
+  }
+
+  function spawnConfetti(count = 90) {
+    const colors = ["#f5c518", "#ffd700", "#ff6b6b", "#4ecdc4", "#a78bfa", "#ffffff"];
+    for (let i = 0; i < count; i++) {
+      const c = document.createElement("div");
+      c.className = "confetti";
+      c.style.left = Math.random() * 100 + "%";
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDelay = Math.random() * 0.9 + "s";
+      c.style.animationDuration = 2 + Math.random() * 2.2 + "s";
+      c.style.transform = `scale(${0.6 + Math.random() * 0.9})`;
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 5500);
+    }
+  }
+
+  // 执行单个阶段：点亮卡片 + 切换场景 + 执行任务 + 记录日志 + 标记完成
+  async function playStage(i, intro, task) {
+    setStage(i);
+    setScene(i);
+    if (intro) await addLog(SCENES[i].emoji, intro);
+    const msg = await withRetry(task);
+    await addLog(SCENES[i].emoji, msg);
+    completeStage(i);
+    return msg;
+  }
+
+  // ============ 主流程（async/await 串联全部阶段） ============
+  async function startHunt() {
+    if (running) return;
+    running = true;
+    resetUI();
+    await sleep(400);
+
+    try {
+      await addLog("🧭", "寻宝之旅开始！", "sys");
+
+      const clue = await playStage(0, null, () => TreasureMap.getInitialClue());
+
+      const location = await playStage(1, null, () => TreasureMap.decodeAncientScript(clue));
+
+      await playStage(2, "来到了一片浓雾弥漫的沼泽…", () => TreasureMap.crossFoggySwamp());
+
+      await playStage(3, "一位神秘商人拦住了去路…", () => TreasureMap.solveMerchantRiddle());
+
+      await playStage(4, "推开大门，眼前是无尽的镜面…", () => TreasureMap.navigateMirrorMaze());
+
+      await playStage(5, "终于抵达神庙，开始搜寻…", () => TreasureMap.searchTemple(location));
+
+      await playStage(6, "守卫苏醒，挡住了宝箱…", () => TreasureMap.defeatGuardian());
+
+      await playStage(7, "深吸一口气，缓缓打开宝箱…", () => TreasureMap.openTreasureBox());
+
+      // 大结局
+      sceneEmojiEl.textContent = "💰";
+      sceneEmojiEl.classList.remove("pop");
+      void sceneEmojiEl.offsetWidth;
+      sceneEmojiEl.classList.add("pop");
+      sceneCaptionEl.textContent = "传奇宝藏";
+      sceneDescEl.textContent = "金币与珠宝闪耀着夺目的光芒！";
+      await addLog("✨", "传奇宝藏现世！冒险圆满结束！", "sys");
+      spawnConfetti();
+    } catch (err) {
+      await addLog("💀", "任务失败：" + err.message, "err");
+      sceneCaptionEl.textContent = "冒险失败";
+      sceneDescEl.textContent = "别灰心，再试一次吧！";
+    } finally {
+      running = false;
+      startBtn.disabled = false;
+      startBtn.textContent = "🔄 再来一次";
+    }
+  }
+</script>
+</body>
+</html>
